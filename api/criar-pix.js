@@ -10,7 +10,7 @@
 // ====================================================================
 
 // ---- EDITAR: mesma tabela de precos do index.html ----
-const PRODUTO = { nome: "PRODUTO AQUI", preco: 10.00 };
+const PRODUTO = { nome: " RD-01", preco: 10.00 };
 const DESCONTO_PCT = 20; // aplicado ao preco do produto
 
 // Bumps partem de 7,90; o UNITARIO cai conforme a QTD selecionada.
