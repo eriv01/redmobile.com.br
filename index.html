@@ -448,7 +448,7 @@ src="https://www.facebook.com/tr?id=1362142175982864&ev=PageView&noscript=1"/></
    /api/criar-pix.js (o servidor recalcula o valor cobrado).
    =================================================================== */
 var CFG = {
-  PIXEL_ID: "PIXEL_ID",                 /* EDITAR: mesmo do bloco do Pixel */
+  PIXEL_ID: "1362142175982864",                 /* EDITAR: mesmo do bloco do Pixel */
   MOEDA: "BRL",
   ITEM_LABEL: "jogos",                  /* EDITAR: palavra usada na copy (ex: jogos, produtos, ebooks) */
 
@@ -725,6 +725,8 @@ function setupVideo(){
 function setupExitIntent(){
   function abrir(){
     if(state.modalMostrado) return;
+    /* so dispara enquanto a tela de venda estiver visivel (nunca no PIX/obrigado) */
+    if($("sec-venda").classList.contains("hidden")) return;
     state.modalMostrado = true;
     $("modalSaida").classList.remove("hidden");
     if(window.__pausarVideo) window.__pausarVideo();
@@ -733,10 +735,12 @@ function setupExitIntent(){
   document.addEventListener("mouseout", function(e){
     if(!e.relatedTarget && e.clientY <= 0) abrir();
   });
-  /* mobile: intercepta o botao voltar uma vez */
+  /* mobile: intercepta o botao voltar uma vez (so na tela de venda) */
   try{
     history.pushState(null, "", location.href);
     window.addEventListener("popstate", function(){
+      /* fora da tela de venda: deixa o voltar funcionar normal, sem modal */
+      if($("sec-venda").classList.contains("hidden")) return;
       if(!state.modalMostrado){ abrir(); history.pushState(null, "", location.href); }
     });
   }catch(e){}
