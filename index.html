@@ -1,3 +1,933 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
 <head>
-oi 
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>PRODUTO AQUI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Teko:wght@500;600;700&display=swap" rel="stylesheet">
+
+<!--
+  ====================================================================
+  FUNIL GENERICO - PAGINA UNICA (banner + VSL + checkout)
+  Integra Mercado Pago (PIX) + Meta Pixel/CAPI com deduplicacao.
+  Otimizado para celular de entrada (4GB RAM, CPU fraca, tela LCD).
+
+  ONDE EDITAR (procure por "EDITAR"):
+   - PIXEL_ID abaixo (no bloco do Pixel e no CFG)
+   - CFG: nome, preco, bumps, imagens, video, links de acesso
+   - As mesmas precos precisam bater com /api/criar-pix.js
+  ====================================================================
+-->
+
+<!-- ============ META PIXEL (base) - EDITAR PIXEL_ID ============ -->
+<script>
+!function(f,b,e,v,n,t,s)
+{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];
+s.parentNode.insertBefore(t,s)}(window, document,'script',
+'https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', 'PIXEL_ID');          /* EDITAR: seu Pixel ID */
+</script>
+<noscript><img height="1" width="1" style="display:none"
+src="https://www.facebook.com/tr?id=PIXEL_ID&ev=PageView&noscript=1"/></noscript>
+<!-- ====================== fim do Pixel ====================== -->
+
+<style>
+  :root{
+    --bg:#09080c;
+    --bg-2:#0d0b12;
+    --surface:#141019;
+    --surface-2:#1b1422;
+    --line:#2c2138;
+    --line-2:#3a2b4a;
+    --red:#ff2b3d;
+    --red-deep:#c20f2a;
+    --red-glow:rgba(255,43,61,.45);
+    --green:#1fe06f;
+    --green-deep:#13a851;
+    --green-glow:rgba(31,224,111,.4);
+    --acid:#ffd60a;
+    --text:#f4eef6;
+    --muted:#9b8fa8;
+    --cut:11px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--text)}
+  body{
+    font-family:"Chakra Petch","Segoe UI",Roboto,Arial,sans-serif;
+    line-height:1.45;-webkit-font-smoothing:antialiased;
+    padding-bottom:46px;position:relative;
+    background:
+      radial-gradient(140% 70% at 50% -10%, rgba(255,43,61,.12), transparent 55%),
+      var(--bg);
+  }
+  /* scanlines sutis (barato, nao usa filtros) */
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:1;opacity:.05;
+    background:repeating-linear-gradient(0deg, #000 0 1px, transparent 1px 3px);
+  }
+  .wrap{max-width:440px;margin:0 auto;padding:0 14px;position:relative;z-index:2}
+  img{max-width:100%;display:block}
+  .hidden{display:none !important}
+
+  /* tipografia utilitaria */
+  .price-font{font-family:"Teko","Chakra Petch",sans-serif;font-weight:600;letter-spacing:.5px}
+
+  /* ---------- topbar ---------- */
+  .topbar{
+    position:relative;z-index:2;
+    background:linear-gradient(90deg,var(--red-deep),var(--red));
+    color:#0a0008;text-align:center;font-size:12px;font-weight:700;
+    padding:8px 10px;letter-spacing:1.5px;text-transform:uppercase;
+  }
+
+  /* ---------- banner ---------- */
+  .banner{position:relative;z-index:2;width:100%}
+  .banner img{width:100%;height:auto}
+  .banner::after{
+    content:"";position:absolute;left:0;right:0;bottom:0;height:60px;
+    background:linear-gradient(to top, var(--bg), transparent);pointer-events:none;
+  }
+
+  /* ---------- VSL ---------- */
+  .vsl{margin:18px auto 4px;max-width:340px}
+  .vsl-frame{
+    position:relative;width:100%;overflow:hidden;background:#000;aspect-ratio:9/16;max-height:64vh;
+    border:1px solid var(--line-2);
+    clip-path:polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px));
+    box-shadow:0 0 0 1px rgba(255,43,61,.15);
+  }
+  .vsl-frame video{width:100%;height:100%;object-fit:contain;background:#000}
+  .vsl-poster{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;cursor:pointer}
+  .vsl-play{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;cursor:pointer;background:rgba(0,0,0,.28)}
+  .vsl-play span{
+    width:64px;height:64px;background:var(--red);display:flex;align-items:center;justify-content:center;
+    clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);
+    box-shadow:0 0 18px var(--red-glow);
+  }
+  .vsl-play span::after{content:"";border-style:solid;border-width:11px 0 11px 18px;border-color:transparent transparent transparent #fff;margin-left:4px}
+  .vsl-cta{text-align:center;font-size:12px;color:var(--muted);margin-top:10px;letter-spacing:1px;text-transform:uppercase}
+
+  /* ---------- cards ---------- */
+  .card{
+    position:relative;background:var(--surface);border:1px solid var(--line);
+    padding:15px 14px;margin-top:14px;
+  }
+  .card::before{
+    content:"";position:absolute;top:-1px;left:-1px;right:-1px;height:2px;
+    background:linear-gradient(90deg,var(--red),transparent 65%);
+  }
+  .card-title{
+    display:flex;align-items:center;gap:9px;font-size:13px;font-weight:700;margin-bottom:12px;
+    text-transform:uppercase;letter-spacing:1.4px;
+  }
+  .card-title .dot{width:10px;height:10px;background:var(--red);box-shadow:0 0 10px var(--red-glow);transform:skewX(-12deg)}
+
+  /* ---------- resumo do pedido ---------- */
+  .order{display:flex;gap:12px;align-items:center}
+  .order img{width:64px;height:64px;object-fit:cover;flex:none;background:var(--surface-2);border:1px solid var(--line-2)}
+  .order .o-name{font-weight:700;font-size:15px;letter-spacing:.3px}
+  .order .o-price{font-family:"Teko",sans-serif;color:var(--green);font-weight:600;font-size:30px;line-height:1;margin-top:4px;text-shadow:0 0 12px var(--green-glow)}
+  .order .o-price small{font-family:"Chakra Petch",sans-serif;color:var(--muted);font-weight:500;font-size:11px;text-shadow:none;letter-spacing:.5px;text-transform:uppercase}
+
+  /* ---------- bumps ---------- */
+  .bump{
+    position:relative;display:flex;gap:11px;align-items:flex-start;
+    border:1px solid var(--line);padding:11px;margin-top:10px;
+    cursor:pointer;background:var(--surface-2);transition:border-color .15s, box-shadow .15s;
+  }
+  .bump.promo{border-color:var(--acid);box-shadow:inset 3px 0 0 var(--acid)}
+  .bump.on{border-color:var(--green);box-shadow:inset 3px 0 0 var(--green), 0 0 14px rgba(31,224,111,.12)}
+  .bump input{margin-top:3px;width:18px;height:18px;flex:none;accent-color:var(--green)}
+  .bump img{width:52px;height:52px;object-fit:cover;flex:none;background:#000;border:1px solid var(--line-2)}
+  .bump .b-name{font-weight:600;font-size:14px;padding-right:56px;letter-spacing:.2px}
+  .bump .b-desc{font-size:12px;color:var(--muted);margin-top:2px}
+  .bump .b-price{font-family:"Teko",sans-serif;font-size:21px;font-weight:600;color:var(--green);margin-top:3px;line-height:1}
+  .bump .b-price s{font-family:"Chakra Petch",sans-serif;color:var(--muted);font-weight:500;font-size:12px;margin-right:6px}
+  .bump .b-badge{
+    position:absolute;top:8px;right:8px;font-size:11px;font-weight:700;
+    color:#1a1206;background:var(--acid);padding:3px 8px 3px 7px;letter-spacing:.3px;
+    clip-path:polygon(8px 0,100% 0,100% 100%,0 100%);
+  }
+  .bump-hint{font-size:12px;color:var(--acid);margin:2px 0 4px;font-weight:600;letter-spacing:.3px}
+
+  /* ---------- form ---------- */
+  .field{margin-top:12px}
+  .field label{display:block;font-size:11px;color:var(--muted);margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:1px}
+  .field label::before{content:"› ";color:var(--red)}
+  .field input{
+    width:100%;background:var(--bg-2);border:1px solid var(--line-2);color:var(--text);
+    padding:13px;font-size:15px;outline:none;font-family:"Chakra Petch",sans-serif;
+    transition:border-color .15s, box-shadow .15s;
+  }
+  .field input:focus{border-color:var(--red);box-shadow:0 0 0 1px var(--red), 0 0 14px var(--red-glow)}
+  .field input::placeholder{color:#6a5f78}
+
+  /* ---------- total + cta ---------- */
+  .total-row{display:flex;justify-content:space-between;align-items:baseline;margin-top:15px;padding-top:13px;border-top:1px solid var(--line)}
+  .total-row .t-label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:1.4px;font-weight:600}
+  .total-row .t-value{font-family:"Teko",sans-serif;font-size:40px;font-weight:700;color:#fff;line-height:.9;text-shadow:0 0 16px var(--green-glow)}
+  .desc-tag{
+    display:inline-block;background:rgba(255,214,10,.12);color:var(--acid);border:1px solid var(--acid);
+    font-size:11px;font-weight:700;padding:4px 9px;margin-top:9px;text-transform:uppercase;letter-spacing:.6px;
+    clip-path:polygon(7px 0,100% 0,100% 100%,0 100%);
+  }
+  .cta{
+    display:block;width:100%;border:none;cursor:pointer;margin-top:15px;position:relative;overflow:hidden;
+    background:linear-gradient(90deg,var(--green-deep),var(--green));
+    color:#04130a;font-size:17px;font-weight:700;padding:17px;
+    letter-spacing:1.5px;text-transform:uppercase;font-family:"Chakra Petch",sans-serif;
+    clip-path:polygon(var(--cut) 0,100% 0,100% calc(100% - var(--cut)),calc(100% - var(--cut)) 100%,0 100%,0 var(--cut));
+    box-shadow:0 0 22px var(--green-glow);transition:transform .08s;
+  }
+  .cta::after{
+    content:"";position:absolute;top:0;left:-60%;width:40%;height:100%;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.45),transparent);
+    transform:skewX(-20deg);animation:scan 3.2s ease-in-out infinite;
+  }
+  .cta:active{transform:scale(.99)}
+  .cta:disabled{opacity:.55;cursor:not-allowed}
+  @keyframes scan{0%,60%{left:-60%}100%{left:140%}}
+  .secure{text-align:center;font-size:11px;color:var(--muted);margin-top:11px;letter-spacing:1px;text-transform:uppercase}
+
+  /* ---------- PIX ---------- */
+  .pix-head{text-align:center;margin-bottom:4px}
+  .pix-head h2{font-size:24px;font-weight:700;text-transform:uppercase;letter-spacing:1px}
+  .pix-urgency{
+    background:linear-gradient(90deg,var(--red-deep),var(--red));color:#0a0008;
+    text-align:center;font-weight:700;font-size:13px;padding:11px;margin:14px 0;
+    text-transform:uppercase;letter-spacing:.8px;
+    clip-path:polygon(9px 0,100% 0,100% calc(100% - 9px),calc(100% - 9px) 100%,0 100%,0 9px);
+  }
+  .pix-urgency #pixTimer{font-family:"Teko",sans-serif;font-size:18px;font-weight:700}
+  .qr-box{text-align:center;background:#fff;padding:14px;margin:0 auto;max-width:240px;border:2px solid var(--green);box-shadow:0 0 22px var(--green-glow)}
+  .qr-box img{width:100%;height:auto}
+  .copia{margin-top:14px;background:var(--bg-2);border:1px solid var(--line-2);padding:11px;font-size:12px;color:var(--muted);word-break:break-all;max-height:64px;overflow:auto;font-family:ui-monospace,monospace}
+  .copy-btn{
+    display:block;width:100%;margin-top:10px;border:none;cursor:pointer;
+    background:var(--red);color:#0a0008;font-weight:700;font-size:15px;padding:15px;
+    text-transform:uppercase;letter-spacing:1.2px;font-family:"Chakra Petch",sans-serif;
+    clip-path:polygon(9px 0,100% 0,100% calc(100% - 9px),calc(100% - 9px) 100%,0 100%,0 9px);
+    box-shadow:0 0 18px var(--red-glow);
+  }
+  .pix-status{text-align:center;margin-top:15px;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px}
+  .pix-status .spin{display:inline-block;width:15px;height:15px;border:2px solid var(--line-2);border-top-color:var(--green);border-radius:50%;vertical-align:-2px;margin-right:7px;animation:sp 1s linear infinite}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .pix-steps{margin-top:18px;font-size:13px;color:var(--muted)}
+  .pix-steps li{margin:7px 0 7px 18px}
+
+  /* ---------- obrigado ---------- */
+  .ok-badge{width:70px;height:70px;background:var(--green);margin:6px auto 16px;display:flex;align-items:center;justify-content:center;clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);box-shadow:0 0 24px var(--green-glow)}
+  .ok-badge::after{content:"";width:20px;height:34px;border:solid #04130a;border-width:0 5px 5px 0;transform:rotate(45deg);margin-top:-6px}
+  .ok-wrap{text-align:center}
+  .ok-wrap h2{font-size:26px;font-weight:700;text-transform:uppercase;letter-spacing:1px}
+  .ok-wrap p{color:var(--muted);font-size:14px;margin-top:9px}
+  .access-btn{
+    display:block;margin-top:18px;text-decoration:none;text-align:center;
+    background:linear-gradient(90deg,var(--green-deep),var(--green));color:#04130a;
+    font-weight:700;font-size:16px;padding:17px;text-transform:uppercase;letter-spacing:1.2px;
+    font-family:"Chakra Petch",sans-serif;
+    clip-path:polygon(var(--cut) 0,100% 0,100% calc(100% - var(--cut)),calc(100% - var(--cut)) 100%,0 100%,0 var(--cut));
+    box-shadow:0 0 22px var(--green-glow);
+  }
+  .access-extra{margin-top:10px}
+  .access-extra a{display:block;text-decoration:none;text-align:center;margin-top:8px;background:var(--surface-2);border:1px solid var(--line-2);color:var(--text);font-weight:600;font-size:14px;padding:14px;letter-spacing:.4px}
+
+  /* ---------- modal saida ---------- */
+  .overlay{position:fixed;inset:0;background:rgba(4,2,8,.85);display:flex;align-items:center;justify-content:center;padding:18px;z-index:50}
+  .modal{
+    position:relative;background:var(--surface);border:1px solid var(--line-2);padding:24px 20px;max-width:344px;width:100%;text-align:center;
+    box-shadow:0 0 40px rgba(255,43,61,.18);
+    clip-path:polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px));
+  }
+  .modal .gift{width:60px;height:60px;background:var(--acid);margin:0 auto 16px;display:flex;align-items:center;justify-content:center;font-size:26px;clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%)}
+  .modal h3{font-size:23px;font-weight:700;text-transform:uppercase;letter-spacing:.6px}
+  .modal p{color:var(--muted);font-size:14px;margin-top:9px}
+  .modal .pct{font-family:"Teko",sans-serif;font-size:20px;font-weight:600;color:#fff;border:1px dashed var(--acid);padding:10px;margin:15px 0;letter-spacing:.5px}
+  .modal .pct b{color:var(--acid)}
+  .modal-bumps{font-size:13px;color:var(--muted);margin:10px 0 4px}
+  .modal-apply{
+    display:block;width:100%;border:none;cursor:pointer;
+    background:linear-gradient(90deg,var(--green-deep),var(--green));color:#04130a;
+    font-weight:700;font-size:16px;padding:16px;text-transform:uppercase;letter-spacing:1.2px;
+    font-family:"Chakra Petch",sans-serif;
+    clip-path:polygon(var(--cut) 0,100% 0,100% calc(100% - var(--cut)),calc(100% - var(--cut)) 100%,0 100%,0 var(--cut));
+    box-shadow:0 0 20px var(--green-glow);
+  }
+  .modal-skip{display:block;width:100%;background:none;border:none;color:var(--muted);font-size:12px;margin-top:13px;cursor:pointer;text-transform:uppercase;letter-spacing:.8px}
+
+  /* ---------- rodape ---------- */
+  .site-footer{
+    position:relative;z-index:2;margin-top:34px;padding:22px 0 6px;
+    border-top:1px solid var(--line);text-align:center;
+  }
+  .site-footer .foot-brand{
+    font-family:"Chakra Petch",sans-serif;font-weight:700;font-size:13px;
+    letter-spacing:3px;text-transform:uppercase;color:var(--text);opacity:.85;
+  }
+  .site-footer .foot-legal{
+    font-size:10.5px;line-height:1.6;color:#6f6580;margin:12px auto 0;max-width:380px;
+  }
+  .site-footer .foot-pay{font-size:11px;color:var(--muted);margin-top:12px;letter-spacing:.3px}
+  .site-footer .foot-pay b{color:#a9d2ff;font-weight:600}
+  .site-footer .foot-copy{font-size:10px;color:#564d66;margin-top:10px;letter-spacing:.5px}
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation:none !important;transition:none !important}
+    .cta::after{display:none}
+  }
+</style>
 </head>
+<body>
+
+<!-- =================== TELA 1: VENDA =================== -->
+<div id="sec-venda">
+
+  <!-- EDITAR: barra de topo (opcional) -->
+  <div class="topbar">// liberacao na hora apos o pix · vagas limitadas hoje</div>
+
+  <!-- EDITAR: banner do topo (troque a URL) -->
+  <div class="banner">
+    <img src="#URL_BANNER_TOPO" alt="Banner" width="440" height="180"
+         onerror="this.style.display='none'"/>
+  </div>
+
+  <div class="wrap">
+
+    <!-- VSL: carrega o video so no play (leve no celular fraco) -->
+    <div class="vsl">
+      <div class="vsl-frame" id="vslFrame">
+        <!-- EDITAR (opcional): poster do video -->
+        <img class="vsl-poster" id="vslPoster" src="#URL_POSTER_VIDEO"
+             alt="Assista" onerror="this.style.background='#000';this.style.opacity='0'"/>
+        <div class="vsl-play" id="vslPlay"><span></span></div>
+        <video id="vsl" playsinline preload="none"
+               src="#URL_VIDEO_VSL"></video>
+      </div>
+      <div class="vsl-cta">Assista ao video e garanta o seu acesso abaixo</div>
+    </div>
+
+    <!-- RESUMO DO PEDIDO -->
+    <div class="card">
+      <div class="card-title"><span class="dot"></span> Resumo do Pedido</div>
+      <div class="order">
+        <img id="prodImg" src="#URL_CAPA_PRODUTO" alt="" onerror="this.style.opacity='.3'"/>
+        <div>
+          <div class="o-name" id="prodNome">PRODUTO AQUI</div>
+          <div class="o-price"><span id="prodPreco">R$ 10,00</span> <small>a vista no PIX</small></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BUMPS (1 a 5) - desconto progressivo (piramide) -->
+    <div class="card">
+      <div class="card-title"><span class="dot"></span> <span id="bumpsTitulo">Adicione mais jogos com desconto</span></div>
+      <div class="bump-hint">Quanto mais jogos voce leva, mais desconto recebe hoje.</div>
+      <div id="bumpsBox"><!-- preenchido via JS a partir do CFG --></div>
+    </div>
+
+    <!-- IDENTIFICACAO -->
+    <div class="card">
+      <div class="card-title"><span class="dot"></span> Identificacao</div>
+
+      <div class="field">
+        <label>Nome completo</label>
+        <input id="fNome" type="text" autocomplete="name" placeholder="Seu nome completo"/>
+      </div>
+      <div class="field">
+        <label>Celular (WhatsApp)</label>
+        <input id="fCel" type="tel" inputmode="numeric" autocomplete="tel"
+               placeholder="(DDD) 90000-0000"/>
+      </div>
+      <div class="field">
+        <label>E-mail que recebera a compra</label>
+        <input id="fEmail" type="email" inputmode="email" autocomplete="email"
+               placeholder="seuemail@exemplo.com"/>
+      </div>
+
+      <div id="descTag" class="desc-tag hidden">Desconto de 20% aplicado!</div>
+
+      <div class="total-row">
+        <span class="t-label">Total</span>
+        <span class="t-value" id="totalVal">R$ 10,00</span>
+      </div>
+
+      <button class="cta" id="btnGerar">GERAR PIX E PAGAR</button>
+      <div class="secure">Pagamento 100% seguro - Mercado Pago</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- =================== TELA 2: PIX =================== -->
+<div id="sec-pix" class="hidden">
+  <div class="wrap" style="padding-top:18px">
+    <div class="pix-head">
+      <h2>Falta o pagamento pra liberar</h2>
+    </div>
+
+    <!-- INCENTIVO A PAGAR -->
+    <div class="pix-urgency" id="pixUrgency">
+      Pague agora - seu PIX expira em <span id="pixTimer">15:00</span>
+    </div>
+
+    <div class="qr-box">
+      <img id="qrImg" src="" alt="QR Code PIX"/>
+    </div>
+
+    <div class="copia" id="copiaTxt">Gerando codigo...</div>
+    <button class="copy-btn" id="btnCopiar">COPIAR CODIGO PIX</button>
+
+    <div class="pix-status">
+      <span class="spin"></span><span id="statusTxt">Aguardando pagamento...</span>
+    </div>
+
+    <ol class="pix-steps">
+      <li>Abra o app do seu banco e escolha pagar com PIX.</li>
+      <li>Use "PIX Copia e Cola" e cole o codigo acima.</li>
+      <li>Confirme. A liberacao e automatica apos o pagamento.</li>
+    </ol>
+  </div>
+</div>
+
+<!-- =================== TELA 3: OBRIGADO / ACESSO =================== -->
+<div id="sec-obrigado" class="hidden">
+  <div class="wrap" style="padding-top:26px">
+    <div class="ok-wrap">
+      <div class="ok-badge"></div>
+      <h2>Pagamento aprovado!</h2>
+      <p>Seu acesso esta liberado. Toque no botao abaixo para acessar agora.</p>
+
+      <!-- EDITAR: link de acesso do produto principal (ACESSOS.principal no CFG) -->
+      <a class="access-btn" id="accPrincipal" href="#" target="_blank" rel="noopener">
+        ACESSAR MEU PRODUTO
+      </a>
+
+      <!-- Acessos dos bumps comprados (aparecem so se o lead levou) -->
+      <div class="access-extra" id="accExtra"></div>
+    </div>
+  </div>
+</div>
+
+<!-- =================== MODAL DE SAIDA =================== -->
+<div id="modalSaida" class="overlay hidden">
+  <div class="modal">
+    <div class="gift">&#127873;</div>
+    <h3>Nao va embora ainda!</h3>
+    <p>Voce ganhou um cupom de desconto para finalizar sua compra.</p>
+    <div class="pct">Desconto de <b>20% OFF</b></div>
+    <div class="modal-bumps">E ainda da tempo de adicionar os itens extras com preco especial.</div>
+    <button class="modal-apply" id="btnAplicarDesc">Aplicar Desconto</button>
+    <button class="modal-skip" id="btnPularDesc">Ignorar e perder cupom</button>
+  </div>
+</div>
+
+<!-- =================== RODAPE =================== -->
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="foot-brand">PAI DOS GAMES</div>
+    <p class="foot-legal">
+      Este site não é afiliado, associado, autorizado nem endossado pela Meta Platforms, Inc.,
+      Facebook ou Instagram. Todas as marcas e nomes citados pertencem aos seus respectivos donos.
+    </p>
+    <p class="foot-pay">Pagamento processado por <b>Mercado Pago</b> · ambiente 100% seguro</p>
+    <p class="foot-copy">© 2026 Pai dos Games · Todos os direitos reservados</p>
+  </div>
+</footer>
+
+
+<script>
+/* ===================================================================
+   CONFIG  -  EDITAR AQUI
+   IMPORTANTE: os precos abaixo precisam ser IGUAIS aos de
+   /api/criar-pix.js (o servidor recalcula o valor cobrado).
+   =================================================================== */
+var CFG = {
+  PIXEL_ID: "PIXEL_ID",                 /* EDITAR: mesmo do bloco do Pixel */
+  MOEDA: "BRL",
+  ITEM_LABEL: "jogos",                  /* EDITAR: palavra usada na copy (ex: jogos, produtos, ebooks) */
+
+  PRODUTO: {
+    nome:  "PRODUTO AQUI",              /* EDITAR */
+    preco: 10.00,                       /* EDITAR */
+    capa:  "#URL_CAPA_PRODUTO"          /* EDITAR */
+  },
+
+  DESCONTO_PCT: 20,                     /* aplicado ao preco do produto */
+
+  /* Acessos liberados na tela de obrigado - EDITAR cada link */
+  ACESSOS: {
+    principal: "#LINK_ACESSO_PRODUTO",  /* EDITAR */
+    bump1: "#LINK_ACESSO_BUMP1",        /* EDITAR */
+    bump2: "#LINK_ACESSO_BUMP2",        /* EDITAR */
+    bump3: "#LINK_ACESSO_BUMP3",        /* EDITAR */
+    bump4: "#LINK_ACESSO_BUMP4",        /* EDITAR */
+    bump5: "#LINK_ACESSO_BUMP5"         /* EDITAR */
+  },
+
+  /* Preco base de TODOS os bumps (e o que aparece de inicio) */
+  BUMP_BASE: 7.90,
+  /* Desconto progressivo: UNITARIO conforme a QTD de bumps marcados.
+     idx 0 = 1 bump marcado, idx 1 = 2 bumps... piso 4,90 nos ultimos.
+     ATENCAO: precisa bater com BUMP_TIERS de /api/criar-pix.js */
+  BUMP_TIERS: [7.90, 6.90, 5.90, 4.90, 4.90],
+
+  /* 5 bumps - EDITAR nome, desc, img (o preco vem dos tiers acima) */
+  BUMPS: [
+    { id:"bump1", nome:"Bump 01 - PRODUTO AQUI", desc:"Descricao do item extra 01", img:"#URL_CAPA_BUMP1" },
+    { id:"bump2", nome:"Bump 02 - PRODUTO AQUI", desc:"Descricao do item extra 02", img:"#URL_CAPA_BUMP2" },
+    { id:"bump3", nome:"Bump 03 - PRODUTO AQUI", desc:"Descricao do item extra 03", img:"#URL_CAPA_BUMP3" },
+    { id:"bump4", nome:"Bump 04 - PRODUTO AQUI", desc:"Descricao do item extra 04", img:"#URL_CAPA_BUMP4" },
+    { id:"bump5", nome:"Bump 05 - PRODUTO AQUI", desc:"Descricao do item extra 05", img:"#URL_CAPA_BUMP5" }
+  ]
+};
+
+/* ===================================================================
+   ESTADO
+   =================================================================== */
+var state = {
+  descontoAtivo: false,
+  bumps: {},            /* id -> true/false */
+  icDisparado: false,   /* InitiateCheckout so 1 vez */
+  modalMostrado: false,
+  paymentId: null,
+  valorCobrado: null,   /* valor real retornado pelo servidor/MP (autoritativo) */
+  pollTimer: null,
+  expiraTimer: null
+};
+
+/* ===================================================================
+   HELPERS
+   =================================================================== */
+function $(id){ return document.getElementById(id); }
+function brl(v){ return "R$ " + v.toFixed(2).replace(".", ","); }
+
+function novoEventId(){
+  /* id unico compartilhado entre navegador (fbq) e servidor (CAPI) */
+  return "ev_" + Date.now() + "_" + Math.random().toString(36).slice(2,10);
+}
+
+function getCookie(name){
+  var m = document.cookie.match(new RegExp("(^| )" + name + "=([^;]+)"));
+  return m ? m[2] : "";
+}
+
+/* dispara o mesmo evento no Pixel e na CAPI com o MESMO event_id (dedup) */
+function track(eventName, custom){
+  var eid = novoEventId();
+  try{
+    if(window.fbq){ fbq("track", eventName, custom || {}, { eventID: eid }); }
+  }catch(e){ console.log("pixel error", e); }
+
+  var payload = {
+    event_name: eventName,
+    event_id: eid,
+    event_source_url: location.href,
+    fbp: getCookie("_fbp"),
+    fbc: getCookie("_fbc"),
+    custom_data: custom || {},
+    user: {
+      email: ($("fEmail") ? $("fEmail").value.trim() : ""),
+      phone: ($("fCel") ? $("fCel").value.replace(/\D/g,"") : ""),
+      nome:  ($("fNome") ? $("fNome").value.trim() : "")
+    }
+  };
+  try{
+    fetch("/api/meta-event", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify(payload)
+    }).catch(function(e){ console.log("capi error", e); });
+  }catch(e){ console.log("capi fetch error", e); }
+
+  return eid;
+}
+
+/* ===================================================================
+   CALCULO DE PRECO (cliente exibe; servidor recalcula ao cobrar)
+   =================================================================== */
+function precoBase(){
+  var p = CFG.PRODUTO.preco;
+  if(state.descontoAtivo){ p = p * (1 - CFG.DESCONTO_PCT/100); }
+  return Math.round(p*100)/100;
+}
+function round2(v){ return Math.round(v*100)/100; }
+function menorTier(){ return CFG.BUMP_TIERS[CFG.BUMP_TIERS.length-1]; }
+/* unitario vigente conforme a QTD de bumps marcados (piso no ultimo tier) */
+function bumpUnit(qtd){
+  if(qtd<=0) return CFG.BUMP_TIERS[0];
+  var idx = Math.min(qtd, CFG.BUMP_TIERS.length) - 1;
+  return CFG.BUMP_TIERS[idx];
+}
+function precoBumps(){
+  var qtd = bumpsSelecionados().length;
+  if(qtd===0) return 0;
+  return round2(bumpUnit(qtd) * qtd);
+}
+function totalAtual(){
+  return Math.round((precoBase()+precoBumps())*100)/100;
+}
+function bumpsSelecionados(){
+  return CFG.BUMPS.filter(function(b){ return state.bumps[b.id]; }).map(function(b){ return b.id; });
+}
+function atualizarTotal(){
+  refreshBumps();
+  $("totalVal").textContent = brl(totalAtual());
+  $("prodPreco").textContent = brl(precoBase());
+  $("descTag").classList.toggle("hidden", !state.descontoAtivo);
+  refreshHint();
+}
+
+/* economia acumulada vs pagar todos a R$ BUMP_BASE (cresce ao adicionar) */
+function economiaBumps(){
+  var qtd = bumpsSelecionados().length;
+  if(qtd === 0) return 0;
+  return round2(CFG.BUMP_BASE * qtd - bumpUnit(qtd) * qtd);
+}
+
+/* texto-guia dinamico: mostra o VALOR economizado hoje, crescendo a cada extra */
+function refreshHint(){
+  var hint = document.querySelector(".bump-hint");
+  if(!hint) return;
+  var qtd = bumpsSelecionados().length;
+  var eco = economiaBumps();
+  var total = CFG.BUMPS.length;
+
+  if(qtd === 0){
+    hint.textContent = "Quanto mais " + CFG.ITEM_LABEL + " voce leva, mais desconto recebe hoje.";
+  }else if(qtd >= total && eco > 0){
+    hint.textContent = "Desconto maximo destravado: voce economizou " + brl(eco) + " hoje!";
+  }else if(eco > 0){
+    hint.textContent = "Voce ja esta economizando " + brl(eco) + " hoje - adicione mais e aumente!";
+  }else{
+    hint.textContent = "Adicione mais 1 e comece a destravar seu desconto.";
+  }
+}
+
+/* ===================================================================
+   RENDER DOS BUMPS
+   =================================================================== */
+/* refs dos cards para atualizar preco/estado sem recriar o DOM */
+var bumpRows = {};
+
+function renderBumps(){
+  var box = $("bumpsBox");
+  box.innerHTML = "";
+  bumpRows = {};
+  CFG.BUMPS.forEach(function(b){
+    var row = document.createElement("label");
+    row.className = "bump";
+    row.setAttribute("data-id", b.id);
+    row.innerHTML =
+      '<span class="b-badge hidden"></span>' +
+      '<input type="checkbox" />' +
+      '<img src="' + b.img + '" alt="" onerror="this.style.opacity=.3" loading="lazy"/>' +
+      '<div>' +
+        '<div class="b-name">' + b.nome + '</div>' +
+        '<div class="b-desc">' + b.desc + '</div>' +
+        '<div class="b-price"></div>' +
+      '</div>';
+
+    var chk = row.querySelector("input");
+    chk.addEventListener("change", function(){
+      state.bumps[b.id] = chk.checked;
+      atualizarTotal();   /* recalcula tudo e atualiza precos exibidos */
+    });
+
+    bumpRows[b.id] = {
+      row: row,
+      priceEl: row.querySelector(".b-price"),
+      badgeEl: row.querySelector(".b-badge")
+    };
+    box.appendChild(row);
+  });
+  refreshBumps();
+}
+
+/* atualiza o preco exibido de TODOS os cards conforme a qtd marcada.
+   0 marcado -> todos em BUMP_BASE; a cada novo marcado o unitario cai. */
+function refreshBumps(){
+  var qtd = bumpsSelecionados().length;
+  var base = CFG.BUMP_BASE;
+  var unit = qtd > 0 ? bumpUnit(qtd) : base;
+  var off = base > unit ? Math.round((1 - unit/base) * 100) : 0;
+
+  CFG.BUMPS.forEach(function(b){
+    var ref = bumpRows[b.id];
+    if(!ref) return;
+    var marcado = !!state.bumps[b.id];
+    ref.row.classList.toggle("on", marcado);
+    ref.row.classList.toggle("promo", off > 0 && !marcado);
+
+    if(off > 0){
+      ref.priceEl.innerHTML = '<s>' + brl(base) + '</s>' + brl(unit);
+      ref.badgeEl.textContent = "-" + off + "%";
+      ref.badgeEl.classList.remove("hidden");
+    }else{
+      ref.priceEl.innerHTML = brl(unit);
+      ref.badgeEl.classList.add("hidden");
+    }
+  });
+}
+
+/* ===================================================================
+   MASCARA DE CELULAR
+   =================================================================== */
+function mascaraCel(v){
+  v = v.replace(/\D/g,"").slice(0,11);
+  if(v.length <= 2) return v.length ? "(" + v : v;
+  if(v.length <= 7) return "(" + v.slice(0,2) + ") " + v.slice(2);
+  return "(" + v.slice(0,2) + ") " + v.slice(2,7) + "-" + v.slice(7);
+}
+
+/* ===================================================================
+   VIDEO VSL  (carrega no play, pausa fora da tela / ao sair)
+   =================================================================== */
+function setupVideo(){
+  var v = $("vsl"), play = $("vslPlay"), poster = $("vslPoster");
+  var iniciado = false, autoPausado = false;
+
+  function iniciar(){
+    if(!iniciado){
+      iniciado = true;
+      v.preload = "auto";
+    }
+    play.style.display = "none";
+    if(poster) poster.style.display = "none";
+    v.controls = true;
+    v.play().catch(function(){});
+  }
+  play.addEventListener("click", iniciar);
+  if(poster) poster.addEventListener("click", iniciar);
+
+  if("IntersectionObserver" in window){
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(en){
+        if(!iniciado) return;
+        if(en.intersectionRatio < 0.5 && !v.paused){ v.pause(); autoPausado = true; }
+        else if(en.intersectionRatio >= 0.5 && autoPausado){ v.play().catch(function(){}); autoPausado = false; }
+      });
+    }, { threshold:[0,0.5,1] });
+    io.observe($("vslFrame"));
+  }
+  /* pausa o video quando abre o modal de saida */
+  window.__pausarVideo = function(){ try{ if(iniciado && !v.paused) v.pause(); }catch(e){} };
+}
+
+/* ===================================================================
+   MODAL DE SAIDA (exit-intent) - desktop e mobile (botao voltar)
+   =================================================================== */
+function setupExitIntent(){
+  function abrir(){
+    if(state.modalMostrado) return;
+    state.modalMostrado = true;
+    $("modalSaida").classList.remove("hidden");
+    if(window.__pausarVideo) window.__pausarVideo();
+  }
+  /* desktop: mouse sai pelo topo */
+  document.addEventListener("mouseout", function(e){
+    if(!e.relatedTarget && e.clientY <= 0) abrir();
+  });
+  /* mobile: intercepta o botao voltar uma vez */
+  try{
+    history.pushState(null, "", location.href);
+    window.addEventListener("popstate", function(){
+      if(!state.modalMostrado){ abrir(); history.pushState(null, "", location.href); }
+    });
+  }catch(e){}
+
+  $("btnAplicarDesc").addEventListener("click", function(){
+    state.descontoAtivo = true;
+    atualizarTotal();
+    $("modalSaida").classList.add("hidden");
+    track("ViewContent", { content_name:"cupom_20_aplicado" });
+    /* leva o lead de volta ao checkout */
+    var alvo = $("sec-venda").querySelector(".total-row");
+    if(alvo) alvo.scrollIntoView({ behavior:"smooth", block:"center" });
+  });
+  $("btnPularDesc").addEventListener("click", function(){
+    $("modalSaida").classList.add("hidden");
+  });
+}
+
+/* ===================================================================
+   GERAR PIX
+   =================================================================== */
+function setupCheckout(){
+  var nome=$("fNome"), cel=$("fCel"), email=$("fEmail"), btn=$("btnGerar");
+
+  cel.addEventListener("input", function(){ cel.value = mascaraCel(cel.value); });
+
+  /* InitiateCheckout quando comeca a preencher o nome (1x) */
+  nome.addEventListener("input", function(){
+    if(!state.icDisparado && nome.value.trim().length >= 2){
+      state.icDisparado = true;
+      track("InitiateCheckout", { value: totalAtual(), currency: CFG.MOEDA });
+    }
+  });
+
+  btn.addEventListener("click", gerarPix);
+
+  function valido(){
+    if(nome.value.trim().length < 3){ alert("Digite seu nome completo."); nome.focus(); return false; }
+    var dig = cel.value.replace(/\D/g,"");
+    if(dig.length < 10){ alert("Digite um celular valido com DDD."); cel.focus(); return false; }
+    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.value.trim())){ alert("Digite um e-mail valido."); email.focus(); return false; }
+    return true;
+  }
+
+  function gerarPix(){
+    if(!valido()) return;
+    btn.disabled = true; btn.textContent = "GERANDO PIX...";
+
+    track("AddPaymentInfo", { value: totalAtual(), currency: CFG.MOEDA });
+
+    var body = {
+      nome: nome.value.trim(),
+      email: email.value.trim(),
+      celular: cel.value.replace(/\D/g,""),
+      desconto: state.descontoAtivo,
+      bumps: bumpsSelecionados()
+    };
+
+    fetch("/api/criar-pix", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify(body)
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if(!data || !data.qr_code){
+        throw new Error(data && data.error ? data.error : "Falha ao gerar PIX");
+      }
+      state.paymentId = data.payment_id;
+      /* valor autoritativo cobrado pelo MP (usado no Purchase para casar com a Meta) */
+      state.valorCobrado = (typeof data.valor === "number") ? data.valor : totalAtual();
+      mostrarPix(data);
+    })
+    .catch(function(err){
+      console.log("gerarPix error", err);
+      alert("Nao foi possivel gerar o PIX agora. Tente novamente.");
+      btn.disabled = false; btn.textContent = "GERAR PIX E PAGAR";
+    });
+  }
+
+  function mostrarPix(data){
+    $("sec-venda").classList.add("hidden");
+    $("sec-pix").classList.remove("hidden");
+    window.scrollTo(0,0);
+
+    if(data.qr_code_base64){
+      $("qrImg").src = "data:image/png;base64," + data.qr_code_base64;
+    }
+    $("copiaTxt").textContent = data.qr_code;
+
+    iniciarTimer(15*60);
+    iniciarPolling();
+  }
+
+  $("btnCopiar").addEventListener("click", function(){
+    var txt = $("copiaTxt").textContent || "";
+    function ok(){ $("btnCopiar").textContent = "CODIGO COPIADO!"; setTimeout(function(){ $("btnCopiar").textContent = "COPIAR CODIGO PIX"; }, 2000); }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(txt).then(ok).catch(function(){ legacyCopy(txt); ok(); });
+    }else{ legacyCopy(txt); ok(); }
+  });
+  function legacyCopy(txt){
+    var ta=document.createElement("textarea"); ta.value=txt; document.body.appendChild(ta);
+    ta.select(); try{ document.execCommand("copy"); }catch(e){} document.body.removeChild(ta);
+  }
+}
+
+/* ===================================================================
+   TIMER DE EXPIRACAO (apenas visual / urgencia)
+   =================================================================== */
+function iniciarTimer(segundos){
+  var t = segundos;
+  function tick(){
+    var m = Math.floor(t/60), s = t%60;
+    $("pixTimer").textContent = (m<10?"0":"")+m + ":" + (s<10?"0":"")+s;
+    if(t<=0){ clearInterval(state.expiraTimer); $("pixUrgency").textContent = "Tempo esgotado - gere um novo PIX se precisar."; return; }
+    t--;
+  }
+  tick();
+  state.expiraTimer = setInterval(tick, 1000);
+}
+
+/* ===================================================================
+   POLLING DO STATUS DO PIX
+   =================================================================== */
+function iniciarPolling(){
+  if(!state.paymentId) return;
+  state.pollTimer = setInterval(function(){
+    fetch("/api/status-pix?id=" + encodeURIComponent(state.paymentId))
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        if(d && d.status === "approved"){
+          clearInterval(state.pollTimer);
+          clearInterval(state.expiraTimer);
+          aprovado();
+        }else if(d && (d.status === "rejected" || d.status === "cancelled")){
+          clearInterval(state.pollTimer);
+          $("statusTxt").textContent = "Pagamento nao concluido. Gere um novo PIX.";
+        }
+      })
+      .catch(function(e){ console.log("status error", e); });
+  }, 4000);
+}
+
+/* ===================================================================
+   PAGAMENTO APROVADO -> Purchase + tela de obrigado
+   =================================================================== */
+function aprovado(){
+  var valor = (typeof state.valorCobrado === "number") ? state.valorCobrado : totalAtual();
+  track("Purchase", { value: valor, currency: CFG.MOEDA });
+
+  $("sec-pix").classList.add("hidden");
+  $("sec-obrigado").classList.remove("hidden");
+  window.scrollTo(0,0);
+
+  $("accPrincipal").href = CFG.ACESSOS.principal;
+
+  /* libera os acessos dos bumps comprados */
+  var extra = $("accExtra"); extra.innerHTML = "";
+  CFG.BUMPS.forEach(function(b){
+    if(state.bumps[b.id]){
+      var a = document.createElement("a");
+      a.href = CFG.ACESSOS[b.id] || "#";
+      a.target = "_blank"; a.rel = "noopener";
+      a.textContent = "Acessar: " + b.nome;
+      extra.appendChild(a);
+    }
+  });
+}
+
+/* ===================================================================
+   INIT
+   =================================================================== */
+(function init(){
+  /* preenche produto */
+  $("prodNome").textContent = CFG.PRODUTO.nome;
+  $("prodImg").src = CFG.PRODUTO.capa;
+  document.title = CFG.PRODUTO.nome;
+  var tituloBumps = $("bumpsTitulo");
+  if(tituloBumps) tituloBumps.textContent = "Adicione mais " + CFG.ITEM_LABEL + " com desconto";
+
+  renderBumps();
+  atualizarTotal();
+  setupVideo();
+  setupCheckout();
+  setupExitIntent();
+
+  /* eventos de entrada */
+  track("PageView", {});
+  track("ViewContent", { content_name: CFG.PRODUTO.nome, value: CFG.PRODUTO.preco, currency: CFG.MOEDA });
+})();
+</script>
+</body>
+</html>
